@@ -16,6 +16,7 @@
 
 package fs2
 
+import cats.Parallel
 import cats.effect._
 import scala.concurrent.duration.FiniteDuration
 
@@ -133,6 +134,7 @@ package object kafka {
   def consumerResource[F[_], K, V](settings: ConsumerSettings[F, K, V])(
     implicit F: ConcurrentEffect[F],
     context: ContextShift[F],
+    parallel: Parallel[F],
     timer: Timer[F]
   ): Resource[F, KafkaConsumer[F, K, V]] =
     KafkaConsumer.consumerResource(settings)
@@ -164,6 +166,7 @@ package object kafka {
   def consumerStream[F[_], K, V](settings: ConsumerSettings[F, K, V])(
     implicit F: ConcurrentEffect[F],
     context: ContextShift[F],
+    parallel: Parallel[F],
     timer: Timer[F]
   ): Stream[F, KafkaConsumer[F, K, V]] =
     Stream.resource(consumerResource(settings))

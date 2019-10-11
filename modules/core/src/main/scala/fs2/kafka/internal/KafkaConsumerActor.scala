@@ -16,6 +16,7 @@
 
 package fs2.kafka.internal
 
+import cats.Parallel
 import cats.data.{Chain, NonEmptyList, NonEmptyVector}
 import cats.effect.{ConcurrentEffect, IO, Timer}
 import cats.effect.concurrent.{Deferred, Ref}
@@ -64,6 +65,7 @@ private[kafka] final class KafkaConsumerActor[F[_], K, V](
   withConsumer: WithConsumer[F]
 )(
   implicit F: ConcurrentEffect[F],
+  parallel: Parallel[F],
   logging: Logging[F],
   jitter: Jitter[F],
   timer: Timer[F]
@@ -315,19 +317,37 @@ private[kafka] final class KafkaConsumerActor[F[_], K, V](
       )
     )
 
-  private[this] def records(batch: KafkaByteConsumerRecords): F[ConsumerRecords] =
-    batch.partitions.toVector
-      .traverse { partition =>
-        NonEmptyVector
-          .fromVectorUnsafe(batch.records(partition).toVector)
-          .traverse { record =>
-            ConsumerRecord
-              .fromJava(record, keyDeserializer, valueDeserializer)
-              .map(committableConsumerRecord(_, partition))
-          }
-          .map((partition, _))
-      }
-      .map(_.toMap)
+  private[this] def records(batch: KafkaByteConsumerRecords): F[ConsumerRecords] = {
+    val processPartition = (partition: TopicPartition) => {
+      val records =
+        NonEmptyVector.fromVectorUnsafe(batch.records(partition).toVector)
+
+      val deserialize = (record: KafkaByteConsumerRecord) =>
+        ConsumerRecord
+          .fromJava(record, keyDeserializer, valueDeserializer)
+          .map(committableConsumerRecord(_, partition))
+
+      val deserialized =
+        if (settings.parallelDeserialization) {
+          records.parTraverse(deserialize)
+        } else {
+          records.traverse(deserialize)
+        }
+
+      deserialized.tupleLeft(partition)
+    }
+
+    val partitions =
+      batch.partitions.toVector
+
+    val processed =
+      if (settings.parallelDeserialization)
+        partitions.parTraverse(processPartition)
+      else
+        partitions.traverse(processPartition)
+
+    processed.map(_.toMap)
+  }
 
   private[this] val pollTimeout: Duration =
     settings.pollTimeout.asJava

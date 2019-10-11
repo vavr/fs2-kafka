@@ -16,7 +16,7 @@
 
 package fs2.kafka
 
-import cats.{Foldable, Reducible}
+import cats.{Foldable, Parallel, Reducible}
 import cats.data.{NonEmptyList, NonEmptySet}
 import cats.effect._
 import cats.effect.concurrent.{Deferred, Ref}
@@ -664,6 +664,7 @@ private[kafka] object KafkaConsumer {
   )(
     implicit F: ConcurrentEffect[F],
     context: ContextShift[F],
+    parallel: Parallel[F],
     timer: Timer[F]
   ): Resource[F, KafkaConsumer[F, K, V]] =
     for {

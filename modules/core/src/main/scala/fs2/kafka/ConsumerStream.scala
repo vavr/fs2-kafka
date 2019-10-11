@@ -16,6 +16,7 @@
 
 package fs2.kafka
 
+import cats.Parallel
 import cats.effect.{ConcurrentEffect, ContextShift, Timer}
 import fs2.Stream
 
@@ -39,9 +40,10 @@ final class ConsumerStream[F[_]] private[kafka] (
     */
   def using[K, V](settings: ConsumerSettings[F, K, V])(
     implicit context: ContextShift[F],
+    parallel: Parallel[F],
     timer: Timer[F]
   ): Stream[F, KafkaConsumer[F, K, V]] =
-    consumerStream(settings)(F, context, timer)
+    consumerStream(settings)(F, context, parallel, timer)
 
   override def toString: String =
     "ConsumerStream$" + System.identityHashCode(this)

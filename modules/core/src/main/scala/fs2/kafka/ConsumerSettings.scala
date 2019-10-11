@@ -407,6 +407,10 @@ sealed abstract class ConsumerSettings[F[_], K, V] {
     * instead be set to `2` and not the specified value.
     */
   def withMaxPrefetchBatches(maxPrefetchBatches: Int): ConsumerSettings[F, K, V]
+
+  def parallelDeserialization: Boolean
+
+  def withParallelDeserialization(parallelDeserialization: Boolean): ConsumerSettings[F, K, V]
 }
 
 object ConsumerSettings {
@@ -422,6 +426,7 @@ object ConsumerSettings {
     override val commitRecovery: CommitRecovery,
     override val recordMetadata: ConsumerRecord[K, V] => String,
     override val maxPrefetchBatches: Int,
+    override val parallelDeserialization: Boolean,
     val createConsumerWith: Map[String, String] => F[KafkaByteConsumer]
   ) extends ConsumerSettings[F, K, V] {
     override def withBlocker(blocker: Blocker): ConsumerSettings[F, K, V] =
@@ -545,8 +550,13 @@ object ConsumerSettings {
     override def withMaxPrefetchBatches(maxPrefetchBatches: Int): ConsumerSettings[F, K, V] =
       copy(maxPrefetchBatches = Math.max(2, maxPrefetchBatches))
 
+    override def withParallelDeserialization(
+      parallelDeserialization: Boolean
+    ): ConsumerSettings[F, K, V] =
+      copy(parallelDeserialization = parallelDeserialization)
+
     override def toString: String =
-      s"ConsumerSettings(closeTimeout = $closeTimeout, commitTimeout = $commitTimeout, pollInterval = $pollInterval, pollTimeout = $pollTimeout, commitRecovery = $commitRecovery)"
+      s"ConsumerSettings(closeTimeout = $closeTimeout, commitTimeout = $commitTimeout, pollInterval = $pollInterval, pollTimeout = $pollTimeout, commitRecovery = $commitRecovery, parallelDeserialization = $parallelDeserialization)"
   }
 
   private[this] def create[F[_], K, V](
@@ -568,6 +578,7 @@ object ConsumerSettings {
       commitRecovery = CommitRecovery.Default,
       recordMetadata = _ => OffsetFetchResponse.NO_METADATA,
       maxPrefetchBatches = 2,
+      parallelDeserialization = false,
       createConsumerWith = properties =>
         F.delay {
           val byteArrayDeserializer = new ByteArrayDeserializer
