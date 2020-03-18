@@ -164,6 +164,10 @@ lazy val metadataSettings = Seq(
 
 lazy val publishSettings =
   metadataSettings ++ Seq(
+    publishTo := Some(
+      "2gis" at "https://artifactory.web-staging.2gis.ru/artifactory/libs-release-local"
+    ),
+    version := "1.0.0+2gis-2",
     publishArtifact in Test := false,
     pomIncludeRepository := (_ => false),
     homepage := Some(url("https://fd4s.github.io/fs2-kafka")),
@@ -213,7 +217,7 @@ lazy val noPublishSettings =
 
 lazy val scalaSettings = Seq(
   scalaVersion := scala213,
-  crossScalaVersions := Seq(scala212, scala213),
+//  crossScalaVersions := Seq(scala212, scala213),
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding",
