@@ -217,7 +217,7 @@ lazy val noPublishSettings =
 
 lazy val scalaSettings = Seq(
   scalaVersion := scala213,
-//  crossScalaVersions := Seq(scala212, scala213),
+  crossScalaVersions := Seq(scala213),
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding",
