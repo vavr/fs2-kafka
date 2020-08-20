@@ -9,7 +9,7 @@ final class AvroDeserializerSpec extends AnyFunSpec {
   describe("AvroDeserializer") {
     it("can create a deserializer") {
       val deserializer =
-        avroDeserializer[Int].using(avroSettings)
+        AvroDeserializer[Int].using(avroSettings)
 
       assert(deserializer.forKey.attempt.unsafeRunSync().isRight)
       assert(deserializer.forValue.attempt.unsafeRunSync().isRight)
@@ -19,7 +19,7 @@ final class AvroDeserializerSpec extends AnyFunSpec {
       val codec: Codec[Int] =
         Codec.instance(
           Left(AvroError("error")),
-          (_, _) => Left(AvroError("encode")),
+          _ => Left(AvroError("encode")),
           (_, _) => Left(AvroError("decode"))
         )
 

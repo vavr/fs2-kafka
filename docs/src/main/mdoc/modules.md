@@ -7,7 +7,7 @@ The following sections describe the additional modules.
 
 ## Vulcan
 
-The `@VULCAN_MODULE_NAME@` module provides [Avro](https://avro.apache.org) serialization support using [Vulcan](https://ovotech.github.io/vulcan).
+The `@VULCAN_MODULE_NAME@` module provides [Avro](https://avro.apache.org) serialization support using [Vulcan](https://fd4s.github.io/vulcan).
 
 We start by defining the type we want to serialize or deserialize, and create a `Codec`.
 
@@ -20,7 +20,7 @@ final case class Person(name: String, age: Option[Int])
 implicit val personCodec: Codec[Person] =
   Codec.record(
     name = "Person",
-    namespace = Some("com.example")
+    namespace = "com.example"
   ) { field =>
     (
       field("name", _.name),
@@ -45,13 +45,13 @@ val avroSettings =
 We can then create a `Serializer` and `Deserializer` instance for `Person`.
 
 ```scala mdoc:silent
-import fs2.kafka.{Deserializer, Serializer}
+import fs2.kafka.{Deserializer, RecordDeserializer, RecordSerializer, Serializer}
 import fs2.kafka.vulcan.{avroDeserializer, avroSerializer}
 
-implicit val personSerializer: Serializer.Record[IO, Person] =
+implicit val personSerializer: RecordSerializer[IO, Person] =
   avroSerializer[Person].using(avroSettings)
 
-implicit val personDeserializer: Deserializer.Record[IO, Person] =
+implicit val personDeserializer: RecordDeserializer[IO, Person] =
   avroDeserializer[Person].using(avroSettings)
 ```
 
@@ -63,12 +63,12 @@ import fs2.kafka.{AutoOffsetReset, ConsumerSettings, ProducerSettings}
 val consumerSettings =
   ConsumerSettings[IO, String, Person]
     .withAutoOffsetReset(AutoOffsetReset.Earliest)
-    .withBootstrapServers("localhost")
+    .withBootstrapServers("localhost:9092")
     .withGroupId("group")
 
 val producerSettings =
   ProducerSettings[IO, String, Person]
-    .withBootstrapServers("localhost")
+    .withBootstrapServers("localhost:9092")
 ```
 
 If we prefer, we can instead specificy the `Serializer`s and `Deserializer`s explicitly.
@@ -80,13 +80,13 @@ ConsumerSettings(
   keyDeserializer = Deserializer[IO, String],
   valueDeserializer = personDeserializer
 ).withAutoOffsetReset(AutoOffsetReset.Earliest)
- .withBootstrapServers("localhost")
+ .withBootstrapServers("localhost:9092")
  .withGroupId("group")
 
 ProducerSettings(
   keySerializer = Serializer[IO, String],
   valueSerializer = personSerializer
-).withBootstrapServers("localhost")
+).withBootstrapServers("localhost:9092")
 ```
 
 ### Sharing Client
@@ -107,10 +107,10 @@ We can then create multiple `Serializer`s and `Deserializer`s using the `AvroSet
 
 ```scala mdoc:silent
 avroSettingsSharedClient.map { avroSettings =>
-  val personSerializer: Serializer.Record[IO, Person] =
+  val personSerializer: RecordSerializer[IO, Person] =
     avroSerializer[Person].using(avroSettings)
 
-  val personDeserializer: Deserializer.Record[IO, Person] =
+  val personDeserializer: RecordDeserializer[IO, Person] =
     avroDeserializer[Person].using(avroSettings)
 
   val consumerSettings =
@@ -118,14 +118,14 @@ avroSettingsSharedClient.map { avroSettings =>
       keyDeserializer = Deserializer[IO, String],
       valueDeserializer = personDeserializer
     ).withAutoOffsetReset(AutoOffsetReset.Earliest)
-    .withBootstrapServers("localhost")
+    .withBootstrapServers("localhost:9092")
     .withGroupId("group")
 
  val producerSettings =
   ProducerSettings(
     keySerializer = Serializer[IO, String],
     valueSerializer = personSerializer
-  ).withBootstrapServers("localhost")
+  ).withBootstrapServers("localhost:9092")
 
   (consumerSettings, producerSettings)
 }

@@ -10,9 +10,11 @@ final class ConsumerSettingsSpec extends BaseSpec {
     it("should be able to set blocker") {
       assert {
         settings.blocker.isEmpty &&
-        settingWithBlocker.use { settings =>
-          IO(settings.blocker.nonEmpty)
-        }.unsafeRunSync
+        settingWithBlocker
+          .use { settings =>
+            IO(settings.blocker.nonEmpty)
+          }
+          .unsafeRunSync()
       }
     }
 
@@ -237,7 +239,7 @@ final class ConsumerSettingsSpec extends BaseSpec {
           .withCreateConsumer(_ => IO.raiseError(new RuntimeException))
           .createConsumer
           .attempt
-          .unsafeRunSync
+          .unsafeRunSync()
           .isLeft
       }
     }
@@ -275,7 +277,7 @@ final class ConsumerSettingsSpec extends BaseSpec {
 
     it("should be able to create with and without deserializer creation effects") {
       val deserializer = Deserializer[IO, String]
-      val recordDeserializer = Deserializer.Record.lift(deserializer)
+      val recordDeserializer = RecordDeserializer.lift(deserializer)
 
       ConsumerSettings(deserializer, deserializer)
       ConsumerSettings(recordDeserializer, deserializer)
@@ -288,12 +290,14 @@ final class ConsumerSettingsSpec extends BaseSpec {
         Deserializer[IO, String]
           .map(identity)
 
-      implicit val deserializer: Deserializer.Record[IO, String] =
-        Deserializer.Record.lift(deserializerInstance)
+      implicit val deserializer: RecordDeserializer[IO, String] =
+        RecordDeserializer.lift(deserializerInstance)
 
       ConsumerSettings[IO, Int, Int]
-      ConsumerSettings[IO, String, Int].keyDeserializer.unsafeRunSync shouldBe deserializerInstance
-      ConsumerSettings[IO, Int, String].valueDeserializer.unsafeRunSync shouldBe deserializerInstance
+      ConsumerSettings[IO, String, Int].keyDeserializer
+        .unsafeRunSync() shouldBe deserializerInstance
+      ConsumerSettings[IO, Int, String].valueDeserializer
+        .unsafeRunSync() shouldBe deserializerInstance
       ConsumerSettings[IO, String, String]
     }
 

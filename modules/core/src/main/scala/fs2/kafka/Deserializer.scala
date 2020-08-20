@@ -1,22 +1,12 @@
 /*
- * Copyright 2018-2019 OVO Energy Limited
+ * Copyright 2018-2020 OVO Energy Limited
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package fs2.kafka
 
-import cats.{Applicative, MonadError}
+import cats.MonadError
 import cats.effect.Sync
 import cats.implicits._
 import java.nio.charset.{Charset, StandardCharsets}
@@ -329,60 +319,4 @@ object Deserializer {
 
   implicit def uuid[F[_]](implicit F: Sync[F]): Deserializer[F, UUID] =
     Deserializer.string[F].map(UUID.fromString).suspend
-
-  /**
-    * Deserializer which may vary depending on whether a record
-    * key or value is being deserialized, and which may require
-    * a creation effect.
-    */
-  sealed abstract class Record[F[_], A] {
-    def forKey: F[Deserializer[F, A]]
-
-    def forValue: F[Deserializer[F, A]]
-  }
-
-  object Record {
-    def apply[F[_], A](
-      implicit deserializer: Deserializer.Record[F, A]
-    ): Deserializer.Record[F, A] =
-      deserializer
-
-    def const[F[_], A](
-      deserializer: => F[Deserializer[F, A]]
-    ): Deserializer.Record[F, A] =
-      Deserializer.Record.instance(
-        forKey = deserializer,
-        forValue = deserializer
-      )
-
-    def instance[F[_], A](
-      forKey: => F[Deserializer[F, A]],
-      forValue: => F[Deserializer[F, A]]
-    ): Deserializer.Record[F, A] = {
-      def _forKey = forKey
-      def _forValue = forValue
-
-      new Deserializer.Record[F, A] {
-        override def forKey: F[Deserializer[F, A]] =
-          _forKey
-
-        override def forValue: F[Deserializer[F, A]] =
-          _forValue
-
-        override def toString: String =
-          "Deserializer.Record$" + System.identityHashCode(this)
-      }
-    }
-
-    def lift[F[_], A](deserializer: => Deserializer[F, A])(
-      implicit F: Applicative[F]
-    ): Deserializer.Record[F, A] =
-      Deserializer.Record.const(F.pure(deserializer))
-
-    implicit def lift[F[_], A](
-      implicit F: Applicative[F],
-      deserializer: Deserializer[F, A]
-    ): Deserializer.Record[F, A] =
-      Deserializer.Record.lift(deserializer)
-  }
 }
